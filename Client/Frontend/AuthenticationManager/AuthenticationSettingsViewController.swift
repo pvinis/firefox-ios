@@ -92,6 +92,7 @@ class RequirePasscodeSetting: Setting {
             success: {
                 self.navigateToRequireInterval()
             },
+            cancel: nil,
             fallback: {
                 AppAuthenticator.presentPasscodeAuthentication(self.navigationController, delegate: self)
             })
@@ -168,6 +169,7 @@ class TouchIDSetting: Setting {
             AppAuthenticator.presentAuthenticationUsingInfo(
                 authInfo,
                 success: self.touchIDSuccess,
+                cancel: nil,
                 fallback: self.touchIDFallback
             )
         } else {
@@ -306,5 +308,9 @@ extension AuthenticationSettingsViewController: PasscodeEntryDelegate {
     @objc func passcodeValidationDidSucceed() {
         getTouchIDSetting()?.toggleTouchID(enabled: false)
         navigationController?.dismissViewControllerAnimated(true, completion: nil)
+    }
+
+    @objc func userDidCancelValidation() {
+        // No-op
     }
 }

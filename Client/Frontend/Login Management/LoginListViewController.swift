@@ -7,6 +7,7 @@ import UIKit
 import SnapKit
 import Storage
 import Shared
+import SwiftKeychainWrapper
 
 private struct LoginListUX {
     static let RowHeight: CGFloat = 58
@@ -65,6 +66,9 @@ class LoginListViewController: UIViewController {
     private var selectedIndexPaths = [NSIndexPath]()
 
     private let tableView = UITableView()
+
+    var backgroundedBlur: UIImageView?
+    var promptingForTouchID: Bool = false
 
     weak var settingsDelegate: SettingsDelegate?
 
@@ -134,12 +138,26 @@ class LoginListViewController: UIViewController {
         KeyboardHelper.defaultHelper.addDelegate(self)
 
         searchView.isEditing ? loadLogins(searchView.inputField.text) : loadLogins()
+
+        let notificationCenter = NSNotificationCenter.defaultCenter()
+        notificationCenter.addObserver(self, selector: #selector(LoginListViewController.checkIfUserRequiresValidation), name: UIApplicationWillEnterForegroundNotification, object: nil)
+        notificationCenter.addObserver(self, selector: #selector(LoginListViewController.removeBackgroundedBlur), name: UIApplicationDidBecomeActiveNotification, object: nil)
+        notificationCenter.addObserver(self, selector: #selector(LoginListViewController.blurLogins), name: UIApplicationWillResignActiveNotification, object: nil)
     }
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         self.loginDataSource.emptyStateView.searchBarHeight = searchView.frame.height
         self.loadingStateView.searchBarHeight = searchView.frame.height
+    }
+
+    override func viewDidDisappear(animated: Bool) {
+        super.viewDidDisappear(animated)
+
+        let notificationCenter = NSNotificationCenter.defaultCenter()
+        notificationCenter.removeObserver(self, name: UIApplicationWillEnterForegroundNotification, object: nil)
+        notificationCenter.removeObserver(self, name: UIApplicationDidBecomeActiveNotification, object: nil)
+        notificationCenter.removeObserver(self, name: UIApplicationWillResignActiveNotification, object: nil)
     }
 
     deinit {
@@ -262,6 +280,47 @@ extension LoginListViewController {
     }
 }
 
+// MARK: - SensitiveViewControllerProtocol
+extension LoginListViewController: SensitiveViewControllerProtocol {
+    func checkIfUserRequiresValidation() {
+        guard let authInfo = KeychainWrapper.authenticationInfo() where authInfo.requiresValidation() else {
+            removeBackgroundedBlur()
+            return
+        }
+
+        if authInfo.requiresValidation() ?? false {
+            self.promptingForTouchID = true
+            AppAuthenticator.presentAuthenticationUsingInfo(authInfo,
+                success: {
+                    self.promptingForTouchID = false
+                    self.removeBackgroundedBlur()
+                },
+                cancel: {
+                    self.promptingForTouchID = false
+                    self.navigationController?.popViewControllerAnimated(true)
+                },
+                fallback: {
+                    self.promptingForTouchID = false
+                    AppAuthenticator.presentPasscodeAuthentication(self.navigationController, delegate: self)
+                }
+            )
+        }
+    }
+
+    func blurLogins() {
+        if backgroundedBlur == nil {
+            backgroundedBlur = addBlurredContent()
+        }
+    }
+
+    func removeBackgroundedBlur() {
+        if !promptingForTouchID {
+            self.backgroundedBlur?.removeFromSuperview()
+            self.backgroundedBlur = nil
+        }
+    }
+}
+
 // MARK: - UITableViewDelegate
 extension LoginListViewController: UITableViewDelegate {
 
@@ -337,6 +396,18 @@ extension LoginListViewController: SearchInputViewDelegate {
         // Show the edit after we're done with the search
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .Edit, target: self, action: #selector(LoginListViewController.SELedit))
         loadLogins()
+    }
+}
+
+// MARK: - PasscodeEntryDelegate
+extension LoginListViewController: PasscodeEntryDelegate {
+    func passcodeValidationDidSucceed() {
+        self.removeBackgroundedBlur()
+        self.navigationController?.dismissViewControllerAnimated(true, completion: nil)
+    }
+
+    func userDidCancelValidation() {
+        self.navigationController?.popViewControllerAnimated(false)
     }
 }
 

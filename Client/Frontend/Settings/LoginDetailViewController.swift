@@ -5,6 +5,7 @@
 import Foundation
 import Storage
 import Shared
+import SwiftKeychainWrapper
 
 private enum InfoItem: Int {
     case TitleItem = 0
@@ -54,6 +55,9 @@ class LoginDetailViewController: UIViewController {
 
     private weak var usernameField: UITextField?
     private weak var passwordField: UITextField?
+
+    var backgroundedBlur: UIImageView?
+    var promptingForTouchID: Bool = false
 
     weak var settingsDelegate: SettingsDelegate?
 
@@ -105,6 +109,20 @@ class LoginDetailViewController: UIViewController {
         // Normally UITableViewControllers handle responding to content inset changes from keyboard events when editing
         // but since we don't use the tableView's editing flag for editing we handle this ourselves.
         KeyboardHelper.defaultHelper.addDelegate(self)
+
+        let notificationCenter = NSNotificationCenter.defaultCenter()
+        notificationCenter.addObserver(self, selector: #selector(LoginDetailViewController.checkIfUserRequiresValidation), name: UIApplicationWillEnterForegroundNotification, object: nil)
+        notificationCenter.addObserver(self, selector: #selector(LoginDetailViewController.blurLoginDetails), name: UIApplicationWillResignActiveNotification, object: nil)
+        notificationCenter.addObserver(self, selector: #selector(LoginDetailViewController.removeBackgroundedBlur), name: UIApplicationDidBecomeActiveNotification, object: nil)
+    }
+
+    override func viewDidDisappear(animated: Bool) {
+        super.viewDidDisappear(animated)
+
+        let notificationCenter = NSNotificationCenter.defaultCenter()
+        notificationCenter.removeObserver(self, name: UIApplicationWillResignActiveNotification, object: nil)
+        notificationCenter.removeObserver(self, name: UIApplicationWillEnterForegroundNotification, object: nil)
+        notificationCenter.removeObserver(self, name: UIApplicationDidBecomeActiveNotification, object: nil)
     }
 
     deinit {
@@ -382,6 +400,47 @@ extension LoginDetailViewController {
     }
 }
 
+// MARK: - SensitiveViewControllerProtocol
+extension LoginDetailViewController: SensitiveViewControllerProtocol {
+    func checkIfUserRequiresValidation() {
+        guard let authInfo = KeychainWrapper.authenticationInfo() where authInfo.requiresValidation() else {
+            removeBackgroundedBlur()
+            return
+        }
+
+        if authInfo.requiresValidation() ?? false {
+            self.promptingForTouchID = true
+            AppAuthenticator.presentAuthenticationUsingInfo(authInfo,
+                success: {
+                    self.promptingForTouchID = false
+                    self.removeBackgroundedBlur()
+                },
+                cancel: {
+                    self.promptingForTouchID = false
+                    self.navigationController?.popToRootViewControllerAnimated(true)
+                },
+                fallback: {
+                    self.promptingForTouchID = false
+                    AppAuthenticator.presentPasscodeAuthentication(self.navigationController, delegate: self)
+                }
+            )
+        }
+    }
+
+    func blurLoginDetails() {
+        if backgroundedBlur == nil {
+            backgroundedBlur = addBlurredContent()
+        }
+    }
+
+    func removeBackgroundedBlur() {
+        if !promptingForTouchID {
+            self.backgroundedBlur?.removeFromSuperview()
+            self.backgroundedBlur = nil
+        }
+    }
+}
+
 // MARK: - Cell Delegate
 extension LoginDetailViewController: LoginTableViewCellDelegate {
 
@@ -408,5 +467,16 @@ extension LoginDetailViewController: LoginTableViewCellDelegate {
         }
 
         return false
+    }
+}
+
+extension LoginDetailViewController: PasscodeEntryDelegate {
+    func passcodeValidationDidSucceed() {
+        self.removeBackgroundedBlur()
+        self.navigationController?.dismissViewControllerAnimated(true, completion: nil)
+    }
+
+    func userDidCancelValidation() {
+        self.navigationController?.popToRootViewControllerAnimated(false)
     }
 }
