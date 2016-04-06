@@ -12,7 +12,7 @@ class AuthenticationManagerTests: KIFTestCase {
 
     override func tearDown() {
         super.tearDown()
-        resetPasscode()
+        PasscodeUtils.resetPasscode()
     }
 
     private func openAuthenticationManager() {
@@ -27,32 +27,15 @@ class AuthenticationManagerTests: KIFTestCase {
         tester().tapViewWithAccessibilityLabel("home")
     }
 
-    private func resetPasscode() {
-        KeychainWrapper.setAuthenticationInfo(nil)
-    }
-
-    private func setPasscode(code: String, interval: PasscodeInterval) {
-        let info = AuthenticationKeychainInfo(passcode: code)
-        info.updateRequiredPasscodeInterval(interval)
-        KeychainWrapper.setAuthenticationInfo(info)
-    }
-
-    private func enterPasscodeWithDigits(digits: String) {
-        tester().tapViewWithAccessibilityLabel(String(digits.characters[digits.startIndex]))
-        tester().tapViewWithAccessibilityLabel(String(digits.characters[digits.startIndex.advancedBy(1)]))
-        tester().tapViewWithAccessibilityLabel(String(digits.characters[digits.startIndex.advancedBy(2)]))
-        tester().tapViewWithAccessibilityLabel(String(digits.characters[digits.startIndex.advancedBy(3)]))
-    }
-
     func testTurnOnPasscodeSetsPasscodeAndInterval() {
-        resetPasscode()
+        PasscodeUtils.resetPasscode()
 
         openAuthenticationManager()
         tester().tapViewWithAccessibilityLabel("Turn Passcode On")
         tester().waitForViewWithAccessibilityLabel("Enter a passcode")
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
         tester().waitForViewWithAccessibilityLabel("Re-enter passcode")
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
         tester().waitForViewWithAccessibilityLabel("Touch ID & Passcode")
 
         let info = KeychainWrapper.authenticationInfo()!
@@ -63,12 +46,12 @@ class AuthenticationManagerTests: KIFTestCase {
     }
 
     func testTurnOffPasscode() {
-        setPasscode("1337", interval: .Immediately)
+        PasscodeUtils.setPasscode("1337", interval: .Immediately)
 
         openAuthenticationManager()
         tester().tapViewWithAccessibilityLabel("Turn Passcode Off")
         tester().waitForViewWithAccessibilityLabel("Enter passcode")
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
         tester().waitForViewWithAccessibilityLabel("Touch ID & Passcode")
         XCTAssertNil(KeychainWrapper.authenticationInfo())
 
@@ -76,16 +59,16 @@ class AuthenticationManagerTests: KIFTestCase {
     }
 
     func testChangePasscode() {
-        setPasscode("1337", interval: .Immediately)
+        PasscodeUtils.setPasscode("1337", interval: .Immediately)
 
         openAuthenticationManager()
         tester().tapViewWithAccessibilityLabel("Change Passcode")
         tester().waitForViewWithAccessibilityLabel("Enter passcode")
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
         tester().waitForViewWithAccessibilityLabel("Enter a new passcode")
-        enterPasscodeWithDigits("2337")
+        PasscodeUtils.enterPasscode(tester(), digits: "2337")
         tester().waitForViewWithAccessibilityLabel("Re-enter passcode")
-        enterPasscodeWithDigits("2337")
+        PasscodeUtils.enterPasscode(tester(), digits: "2337")
         tester().waitForViewWithAccessibilityLabel("Touch ID & Passcode")
 
         let info = KeychainWrapper.authenticationInfo()!
@@ -95,37 +78,37 @@ class AuthenticationManagerTests: KIFTestCase {
     }
 
     func testChangePasscodeShowsErrorStates() {
-        setPasscode("1337", interval: .Immediately)
+        PasscodeUtils.setPasscode("1337", interval: .Immediately)
 
         openAuthenticationManager()
         tester().tapViewWithAccessibilityLabel("Change Passcode")
         tester().waitForViewWithAccessibilityLabel("Enter passcode")
 
         // Enter wrong passcode
-        enterPasscodeWithDigits("2337")
+        PasscodeUtils.enterPasscode(tester(), digits: "2337")
         tester().waitForViewWithAccessibilityLabel(String(format: AuthenticationStrings.incorrectAttemptsRemaining, 2))
 
-        enterPasscodeWithDigits("2337")
+        PasscodeUtils.enterPasscode(tester(), digits: "2337")
         tester().waitForViewWithAccessibilityLabel(String(format: AuthenticationStrings.incorrectAttemptsRemaining, 1))
 
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
         tester().waitForViewWithAccessibilityLabel("Enter a new passcode")
 
         // Enter same passcode
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
         tester().waitForViewWithAccessibilityLabel("New passcode must be different than existing code.")
 
-        enterPasscodeWithDigits("2337")
+        PasscodeUtils.enterPasscode(tester(), digits: "2337")
         tester().waitForViewWithAccessibilityLabel("Re-enter passcode")
 
         // Enter mismatched passcode
-        enterPasscodeWithDigits("3337")
+        PasscodeUtils.enterPasscode(tester(), digits: "3337")
         tester().waitForViewWithAccessibilityLabel("Passcodes didn't match. Try again.")
 
-        enterPasscodeWithDigits("2337")
+        PasscodeUtils.enterPasscode(tester(), digits: "2337")
         tester().waitForViewWithAccessibilityLabel("Re-enter passcode")
 
-        enterPasscodeWithDigits("2337")
+        PasscodeUtils.enterPasscode(tester(), digits: "2337")
 
         let info = KeychainWrapper.authenticationInfo()!
         XCTAssertEqual(info.passcode!, "2337")
@@ -134,13 +117,13 @@ class AuthenticationManagerTests: KIFTestCase {
     }
 
     func testChangeRequirePasscodeInterval() {
-        setPasscode("1337", interval: .Immediately)
+        PasscodeUtils.setPasscode("1337", interval: .Immediately)
 
         openAuthenticationManager()
         tester().tapViewWithAccessibilityLabel("Require Passcode")
 
         tester().waitForViewWithAccessibilityLabel("Enter Passcode")
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
 
         let tableView = tester().waitForViewWithAccessibilityIdentifier("AuthenticationManager.passcodeIntervalTableView") as! UITableView
         var immediatelyCell = tableView.cellForRowAtIndexPath(NSIndexPath(forRow: 0, inSection: 0))!
@@ -169,14 +152,14 @@ class AuthenticationManagerTests: KIFTestCase {
     }
 
     func testEnteringLoginsUsingPasscode() {
-        setPasscode("1337", interval: .Immediately)
+        PasscodeUtils.setPasscode("1337", interval: .Immediately)
 
         tester().tapViewWithAccessibilityLabel("Show Tabs")
         tester().tapViewWithAccessibilityLabel("Settings")
         tester().tapViewWithAccessibilityLabel("Logins")
 
         tester().waitForViewWithAccessibilityLabel("Enter Passcode")
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
         tester().waitForViewWithAccessibilityIdentifier("Login List")
 
         tester().tapViewWithAccessibilityLabel("Back")
@@ -185,14 +168,14 @@ class AuthenticationManagerTests: KIFTestCase {
     }
 
     func testEnteringLoginsUsingPasscodeWithImmediateInterval() {
-        setPasscode("1337", interval: .Immediately)
+        PasscodeUtils.setPasscode("1337", interval: .Immediately)
 
         tester().tapViewWithAccessibilityLabel("Show Tabs")
         tester().tapViewWithAccessibilityLabel("Settings")
         tester().tapViewWithAccessibilityLabel("Logins")
 
         tester().waitForViewWithAccessibilityLabel("Enter Passcode")
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
         tester().waitForViewWithAccessibilityIdentifier("Login List")
         tester().tapViewWithAccessibilityLabel("Back")
 
@@ -205,14 +188,14 @@ class AuthenticationManagerTests: KIFTestCase {
     }
 
     func testEnteringLoginsUsingPasscodeWithFiveMinutesInterval() {
-        setPasscode("1337", interval: .FiveMinutes)
+        PasscodeUtils.setPasscode("1337", interval: .FiveMinutes)
 
         tester().tapViewWithAccessibilityLabel("Show Tabs")
         tester().tapViewWithAccessibilityLabel("Settings")
         tester().tapViewWithAccessibilityLabel("Logins")
 
         tester().waitForViewWithAccessibilityLabel("Enter Passcode")
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
         tester().waitForViewWithAccessibilityIdentifier("Login List")
         tester().tapViewWithAccessibilityLabel("Back")
 
@@ -238,7 +221,7 @@ class AuthenticationManagerTests: KIFTestCase {
     }
 
     func testWrongPasscodeDisplaysAttemptsAndMaxError() {
-        setPasscode("1337", interval: .FiveMinutes)
+        PasscodeUtils.setPasscode("1337", interval: .FiveMinutes)
 
         tester().tapViewWithAccessibilityLabel("Show Tabs")
         tester().tapViewWithAccessibilityLabel("Settings")
@@ -247,11 +230,11 @@ class AuthenticationManagerTests: KIFTestCase {
         tester().waitForViewWithAccessibilityLabel("Enter Passcode")
 
         // Enter wrong passcode
-        enterPasscodeWithDigits("1234")
+        PasscodeUtils.enterPasscode(tester(), digits: "1234")
         tester().waitForViewWithAccessibilityLabel(String(format: AuthenticationStrings.incorrectAttemptsRemaining, 2))
-        enterPasscodeWithDigits("1234")
+        PasscodeUtils.enterPasscode(tester(), digits: "1234")
         tester().waitForViewWithAccessibilityLabel(String(format: AuthenticationStrings.incorrectAttemptsRemaining, 1))
-        enterPasscodeWithDigits("1234")
+        PasscodeUtils.enterPasscode(tester(), digits: "1234")
         tester().waitForViewWithAccessibilityLabel(AuthenticationStrings.maximumAttemptsReachedNoTime)
 
         tester().tapViewWithAccessibilityLabel("Cancel")
@@ -260,7 +243,7 @@ class AuthenticationManagerTests: KIFTestCase {
     }
 
     func testWrongPasscodeAttemptsPersistAcrossEntryAndConfirmation() {
-        setPasscode("1337", interval: .FiveMinutes)
+        PasscodeUtils.setPasscode("1337", interval: .FiveMinutes)
 
         tester().tapViewWithAccessibilityLabel("Show Tabs")
         tester().tapViewWithAccessibilityLabel("Settings")
@@ -269,7 +252,7 @@ class AuthenticationManagerTests: KIFTestCase {
         tester().waitForViewWithAccessibilityLabel("Enter Passcode")
 
         // Enter wrong passcode
-        enterPasscodeWithDigits("1234")
+        PasscodeUtils.enterPasscode(tester(), digits: "1234")
         tester().waitForViewWithAccessibilityLabel(String(format: AuthenticationStrings.incorrectAttemptsRemaining, 2))
 
         tester().tapViewWithAccessibilityLabel("Cancel")
@@ -277,22 +260,22 @@ class AuthenticationManagerTests: KIFTestCase {
         tester().tapViewWithAccessibilityLabel("Turn Passcode Off")
 
         // Enter wrong passcode, again
-        enterPasscodeWithDigits("1234")
+        PasscodeUtils.enterPasscode(tester(), digits: "1234")
         tester().waitForViewWithAccessibilityLabel(String(format: AuthenticationStrings.incorrectAttemptsRemaining, 1))
         tester().tapViewWithAccessibilityLabel("Cancel")
         closeAuthenticationManager()
     }
 
     func testChangedPasswordMustBeNew() {
-        setPasscode("1337", interval: .FiveMinutes)
+        PasscodeUtils.setPasscode("1337", interval: .FiveMinutes)
         openAuthenticationManager()
         tester().tapViewWithAccessibilityLabel("Change Passcode")
 
         tester().waitForViewWithAccessibilityLabel("Enter passcode")
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
 
         tester().waitForViewWithAccessibilityLabel("Enter a new passcode")
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
 
         // Should display error and take us back to first pane
         tester().waitForViewWithAccessibilityLabel("New passcode must be different than existing code.")
@@ -307,10 +290,10 @@ class AuthenticationManagerTests: KIFTestCase {
         tester().tapViewWithAccessibilityLabel("Turn Passcode On")
 
         tester().waitForViewWithAccessibilityLabel("Enter a passcode")
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
 
         tester().waitForViewWithAccessibilityLabel("Re-enter passcode")
-        enterPasscodeWithDigits("1234")
+        PasscodeUtils.enterPasscode(tester(), digits: "1234")
 
         // Should display error and take us back to first pane
         tester().waitForViewWithAccessibilityLabel("Passcodes didn't match. Try again.")
@@ -321,17 +304,17 @@ class AuthenticationManagerTests: KIFTestCase {
     }
 
     func testPasscodeMustBeCorrectWhenRemoving() {
-        setPasscode("1337", interval: .Immediately)
+        PasscodeUtils.setPasscode("1337", interval: .Immediately)
 
         openAuthenticationManager()
         tester().tapViewWithAccessibilityLabel("Turn Passcode Off")
 
         tester().waitForViewWithAccessibilityLabel("Enter passcode")
-        enterPasscodeWithDigits("2337")
+        PasscodeUtils.enterPasscode(tester(), digits: "2337")
 
         tester().waitForViewWithAccessibilityLabel(String(format: AuthenticationStrings.incorrectAttemptsRemaining, 2))
 
-        enterPasscodeWithDigits("1337")
+        PasscodeUtils.enterPasscode(tester(), digits: "1337")
         tester().tapViewWithAccessibilityLabel("Touch ID & Passcode")
 
         closeAuthenticationManager()
