@@ -82,35 +82,7 @@ class RequirePasscodeSetting: Setting {
     }
 
     override func onClick(_: UINavigationController?) {
-        guard let authInfo = KeychainWrapper.authenticationInfo() else {
-            navigateToRequireInterval()
-            return
-        }
-
-        if AppConstants.MOZ_AUTHENTICATION_MANAGER && authInfo.requiresValidation() {
-            AppAuthenticator.presentAuthenticationUsingInfo(authInfo,
-            success: {
-                self.navigateToRequireInterval()
-            },
-            cancel: nil,
-            fallback: {
-                AppAuthenticator.presentPasscodeAuthentication(self.navigationController, delegate: self)
-            })
-        } else {
-            self.navigateToRequireInterval()
-        }
-    }
-
-    private func navigateToRequireInterval() {
         navigationController?.pushViewController(RequirePasscodeIntervalViewController(), animated: true)
-    }
-}
-
-extension RequirePasscodeSetting: PasscodeEntryDelegate {
-    @objc func passcodeValidationDidSucceed() {
-        navigationController?.dismissViewControllerAnimated(true) {
-            self.navigateToRequireInterval()
-        }
     }
 }
 
