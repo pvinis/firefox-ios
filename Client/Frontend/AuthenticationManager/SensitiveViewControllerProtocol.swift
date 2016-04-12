@@ -6,12 +6,76 @@ import Foundation
 import SnapKit
 import SwiftKeychainWrapper
 
-protocol SensitiveViewControllerProtocol {
-    func addBlurredContent() -> UIImageView?
+protocol SensitiveViewControllerProtocol: class, PasscodeEntryDelegate {
+    var promptingForTouchID: Bool { get set }
+    var backgroundedBlur: UIImageView? { get set }
+
+    func registerObserversForSensitiveVCNotifications()
+    func removeObserversForSensitiveVCNotifications()
+
+    func checkIfUserRequiresValidation()
+    func blurContents()
+    func removeBackgroundedBlur()
 }
 
 extension SensitiveViewControllerProtocol where Self: UIViewController {
-    func addBlurredContent() -> UIImageView? {
+    func registerObserversForSensitiveVCNotifications() {
+        let notificationCenter = NSNotificationCenter.defaultCenter()
+        notificationCenter.addObserverForName(UIApplicationWillEnterForegroundNotification, object: nil, queue: nil) { notification in
+            self.checkIfUserRequiresValidation()
+        }
+        notificationCenter.addObserverForName(UIApplicationWillResignActiveNotification, object: nil, queue: nil) { notification in
+            self.blurContents()
+        }
+        notificationCenter.addObserverForName(UIApplicationDidBecomeActiveNotification, object: nil, queue: nil) { notification in
+            self.removeBackgroundedBlur()
+        }
+    }
+
+    func removeObserversForSensitiveVCNotifications() {
+        let notificationCenter = NSNotificationCenter.defaultCenter()
+        notificationCenter.removeObserver(self, name: UIApplicationWillResignActiveNotification, object: nil)
+        notificationCenter.removeObserver(self, name: UIApplicationWillEnterForegroundNotification, object: nil)
+        notificationCenter.removeObserver(self, name: UIApplicationDidBecomeActiveNotification, object: nil)
+    }
+
+    func checkIfUserRequiresValidation() {
+        guard let authInfo = KeychainWrapper.authenticationInfo() where authInfo.requiresValidation() else {
+            removeBackgroundedBlur()
+            return
+        }
+
+        promptingForTouchID = true
+        AppAuthenticator.presentAuthenticationUsingInfo(authInfo,
+            success: {
+                self.promptingForTouchID = false
+                self.removeBackgroundedBlur()
+            },
+            cancel: {
+                self.promptingForTouchID = false
+                self.navigationController?.popToRootViewControllerAnimated(true)
+            },
+            fallback: {
+                self.promptingForTouchID = false
+                AppAuthenticator.presentPasscodeAuthentication(self.navigationController, delegate: self)
+            }
+        )
+    }
+
+    func blurContents() {
+        if backgroundedBlur == nil {
+            backgroundedBlur = addBlurredContent()
+        }
+    }
+
+    func removeBackgroundedBlur() {
+        if !promptingForTouchID {
+            backgroundedBlur?.removeFromSuperview()
+            backgroundedBlur = nil
+        }
+    }
+
+    private func addBlurredContent() -> UIImageView? {
         guard let snapshot = view.screenshot() else {
             return nil
         }
@@ -25,3 +89,16 @@ extension SensitiveViewControllerProtocol where Self: UIViewController {
         return blurView
     }
 }
+
+// MARK: - PasscodeEntryDelegate Defaults
+extension SensitiveViewControllerProtocol where Self: UIViewController {
+    func passcodeValidationDidSucceed() {
+        removeBackgroundedBlur()
+        self.navigationController?.dismissViewControllerAnimated(true, completion: nil)
+    }
+
+    func userDidCancelValidation() {
+        self.navigationController?.popToRootViewControllerAnimated(false)
+    }
+}
+

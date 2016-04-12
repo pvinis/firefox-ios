@@ -8,9 +8,9 @@ import Shared
 import SwiftKeychainWrapper
 
 /// Delegate available for PasscodeEntryViewController consumers to be notified of the validation of a passcode.
-@objc protocol PasscodeEntryDelegate: class {
+protocol PasscodeEntryDelegate: class {
     func passcodeValidationDidSucceed()
-    optional func userDidCancelValidation()
+    func userDidCancelValidation()
 }
 
 /// Presented to the to user when asking for their passcode to validate entry into a part of the app.
@@ -47,7 +47,7 @@ class PasscodeEntryViewController: BasePasscodeViewController {
     }
 
     override func dismiss() {
-        delegate?.userDidCancelValidation?()
+        delegate?.userDidCancelValidation()
         super.dismiss()
     }
 }

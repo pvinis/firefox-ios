@@ -509,11 +509,13 @@ class LoginsSetting: Setting {
 }
 
 extension LoginsSetting: PasscodeEntryDelegate {
-    @objc func passcodeValidationDidSucceed() {
+    func passcodeValidationDidSucceed() {
         navigationController?.dismissViewControllerAnimated(true) {
             self.navigateToLoginsList()
         }
     }
+
+    func userDidCancelValidation() {}
 }
 
 class TouchIDPasscodeSetting: Setting {

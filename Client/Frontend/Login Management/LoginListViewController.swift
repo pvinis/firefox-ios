@@ -29,7 +29,7 @@ private extension UITableView {
 
 private let LoginCellIdentifier = "LoginCell"
 
-class LoginListViewController: UIViewController {
+class LoginListViewController: UIViewController, SensitiveViewControllerProtocol {
 
     private lazy var loginSelectionController: ListSelectionController = {
         return ListSelectionController(tableView: self.tableView)
@@ -139,10 +139,7 @@ class LoginListViewController: UIViewController {
 
         searchView.isEditing ? loadLogins(searchView.inputField.text) : loadLogins()
 
-        let notificationCenter = NSNotificationCenter.defaultCenter()
-        notificationCenter.addObserver(self, selector: #selector(LoginListViewController.checkIfUserRequiresValidation), name: UIApplicationWillEnterForegroundNotification, object: nil)
-        notificationCenter.addObserver(self, selector: #selector(LoginListViewController.removeBackgroundedBlur), name: UIApplicationDidBecomeActiveNotification, object: nil)
-        notificationCenter.addObserver(self, selector: #selector(LoginListViewController.blurLogins), name: UIApplicationWillResignActiveNotification, object: nil)
+        registerObserversForSensitiveVCNotifications()
     }
 
     override func viewDidLayoutSubviews() {
@@ -153,11 +150,7 @@ class LoginListViewController: UIViewController {
 
     override func viewDidDisappear(animated: Bool) {
         super.viewDidDisappear(animated)
-
-        let notificationCenter = NSNotificationCenter.defaultCenter()
-        notificationCenter.removeObserver(self, name: UIApplicationWillEnterForegroundNotification, object: nil)
-        notificationCenter.removeObserver(self, name: UIApplicationDidBecomeActiveNotification, object: nil)
-        notificationCenter.removeObserver(self, name: UIApplicationWillResignActiveNotification, object: nil)
+        removeObserversForSensitiveVCNotifications()
     }
 
     deinit {
@@ -280,47 +273,6 @@ extension LoginListViewController {
     }
 }
 
-// MARK: - SensitiveViewControllerProtocol
-extension LoginListViewController: SensitiveViewControllerProtocol {
-    func checkIfUserRequiresValidation() {
-        guard let authInfo = KeychainWrapper.authenticationInfo() where authInfo.requiresValidation() else {
-            removeBackgroundedBlur()
-            return
-        }
-
-        if authInfo.requiresValidation() ?? false {
-            self.promptingForTouchID = true
-            AppAuthenticator.presentAuthenticationUsingInfo(authInfo,
-                success: {
-                    self.promptingForTouchID = false
-                    self.removeBackgroundedBlur()
-                },
-                cancel: {
-                    self.promptingForTouchID = false
-                    self.navigationController?.popViewControllerAnimated(true)
-                },
-                fallback: {
-                    self.promptingForTouchID = false
-                    AppAuthenticator.presentPasscodeAuthentication(self.navigationController, delegate: self)
-                }
-            )
-        }
-    }
-
-    func blurLogins() {
-        if backgroundedBlur == nil {
-            backgroundedBlur = addBlurredContent()
-        }
-    }
-
-    func removeBackgroundedBlur() {
-        if !promptingForTouchID {
-            self.backgroundedBlur?.removeFromSuperview()
-            self.backgroundedBlur = nil
-        }
-    }
-}
-
 // MARK: - UITableViewDelegate
 extension LoginListViewController: UITableViewDelegate {
 
@@ -396,18 +348,6 @@ extension LoginListViewController: SearchInputViewDelegate {
         // Show the edit after we're done with the search
         navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .Edit, target: self, action: #selector(LoginListViewController.SELedit))
         loadLogins()
-    }
-}
-
-// MARK: - PasscodeEntryDelegate
-extension LoginListViewController: PasscodeEntryDelegate {
-    func passcodeValidationDidSucceed() {
-        self.removeBackgroundedBlur()
-        self.navigationController?.dismissViewControllerAnimated(true, completion: nil)
-    }
-
-    func userDidCancelValidation() {
-        self.navigationController?.popViewControllerAnimated(false)
     }
 }
 
