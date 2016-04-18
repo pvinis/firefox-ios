@@ -46,3 +46,8 @@ extension Strings {
     public static let LoginsHelperDontSaveButtonTitle = NSLocalizedString("LoginsHelper.DontSave.Button", value: "Don’t Save", comment: "Button to not save the user's password")
     public static let LoginsHelperUpdateButtonTitle = NSLocalizedString("LoginsHelper.Update.Button", value: "Update", comment: "Button to update the user's password")
 }
+
+// Home page.
+extension Strings {
+    public static let SettingsHomePageSectionName = NSLocalizedString("Settings.HomePage.SectionName", value: "Home page", comment: "Label used as an item in Settings. When touched it will open a dialog to configure the home page and its uses.")
+}
