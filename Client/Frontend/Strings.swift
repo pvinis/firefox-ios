@@ -50,4 +50,5 @@ extension Strings {
 // Home page.
 extension Strings {
     public static let SettingsHomePageSectionName = NSLocalizedString("Settings.HomePage.SectionName", value: "Home page", comment: "Label used as an item in Settings. When touched it will open a dialog to configure the home page and its uses.")
+    public static let SettingsHomePageTitle = NSLocalizedString("Settings.HomePage.Title", value: "Home page", comment: "Title displayed in header of the setting panel.")
 }
