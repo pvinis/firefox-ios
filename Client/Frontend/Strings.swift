@@ -52,4 +52,5 @@ extension Strings {
     public static let SettingsHomePageSectionName = NSLocalizedString("Settings.HomePage.SectionName", value: "Home page", comment: "Label used as an item in Settings. When touched it will open a dialog to configure the home page and its uses.")
     public static let SettingsHomePageTitle = NSLocalizedString("Settings.HomePage.Title", value: "Home page", comment: "Title displayed in header of the setting panel.")
     public static let SettingsHomePageUIPositionTitle = NSLocalizedString("Settings.HomePage.UI.Toggle", value: "Show Home Page icon in menu", comment: "Toggle setting to show home page button in menu, or on toolbar.")
+    public static let SettingsHomePageURLSectionTitle = NSLocalizedString("Settings.HomePage.URL.Title", value: "Current Home Page URL", comment: "Title of the setting section containing the URL of the current home page.")
 }
