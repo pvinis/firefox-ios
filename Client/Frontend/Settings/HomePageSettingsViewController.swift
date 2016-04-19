@@ -4,6 +4,7 @@
 
 import UIKit
 import Shared
+import SnapKit
 
 private let SectionSettings = 1
 private let SectionURLTextView = 0
@@ -61,13 +62,9 @@ class HomePageSettingsViewController: UITableViewController {
             setting.onConfigureCell(cell)
             return cell
         } else {
-            let cell = UITableViewCell(style: UITableViewCellStyle.Default, reuseIdentifier: nil)
+            let cell = HomePageURLTableViewCell(style: UITableViewCellStyle.Default, reuseIdentifier: nil)
             assert(indexPath.section == SectionURLTextView)
-            cell.textLabel?.text = Strings.SettingsHomePageURLSectionTitle
-            cell.textLabel?.textAlignment = NSTextAlignment.Natural
-            cell.textLabel?.textColor = UIConstants.TableViewRowTextColor
-            cell.accessibilityTraits = UIAccessibilityTraitButton
-            cell.textLabel?.text = UIConstants.DefaultHomePage.absoluteDisplayString()
+            cell.homePage = UIConstants.DefaultHomePage
             cell.accessibilityIdentifier = "HomePage"
             clearButton = cell
             return cell
@@ -122,5 +119,60 @@ class HomePageSettingsViewController: UITableViewController {
 
     override func tableView(tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
         return UIConstants.TableViewHeaderFooterHeight
+    }
+}
+
+class HomePageURLTableViewCell: UITableViewCell {
+
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    let container = UIView()
+
+    var urlTextView: AutocompleteTextField
+
+    var homePage: NSURL? {
+        get {
+            return NSURL(string: urlTextView.text ?? "")
+        }
+
+        set {
+            urlTextView.text = newValue?.absoluteDisplayString()
+        }
+    }
+
+    override init(style: UITableViewCellStyle, reuseIdentifier: String?) {
+        urlTextView = AutocompleteTextField()
+
+
+        super.init(style: style, reuseIdentifier: reuseIdentifier)
+        contentView.addSubview(urlTextView)
+
+        urlTextView.autocompleteDelegate = self
+
+        urlTextView.snp_makeConstraints { make in
+            make.centerWithinMargins.equalTo(contentView)
+            make.size.equalTo(contentView)
+        }
+    }
+}
+
+extension HomePageURLTableViewCell: AutocompleteTextFieldDelegate {
+    func autocompleteTextField(autocompleteTextField: AutocompleteTextField, didEnterText text: String) {
+        log.info(text)
+    }
+
+    func autocompleteTextFieldShouldReturn(autocompleteTextField: AutocompleteTextField) -> Bool {
+        log.info("")
+        return true
+    }
+    func autocompleteTextFieldShouldClear(autocompleteTextField: AutocompleteTextField) -> Bool {
+        log.info("")
+        return true
+    }
+
+    func autocompleteTextFieldDidBeginEditing(autocompleteTextField: AutocompleteTextField) {
+        log.info("")
     }
 }
