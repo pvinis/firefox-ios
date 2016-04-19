@@ -617,7 +617,7 @@ class HomePageSetting: Setting {
 
     override var accessoryType: UITableViewCellAccessoryType { return .DisclosureIndicator }
 
-    override var accessibilityIdentifier: String? { return "ClearPrivateData" }
+    override var accessibilityIdentifier: String? { return "HomePage" }
 
     init(settings: SettingsTableViewController) {
         self.profile = settings.profile
