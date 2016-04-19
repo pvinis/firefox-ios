@@ -71,6 +71,9 @@ class TodayViewController: UIViewController, NCWidgetProviding {
         button.addTarget(self, action: #selector(onPressOpenClibpoard), forControlEvents: .TouchUpInside)
         button.setBackgroundColor(TodayUX.backgroundHightlightColor, forState: .Highlighted)
 
+        // We need to set the background image/color otherwise, only the UILabels and UIImageView will be tappable.
+        button.setBackgroundColor(UIColor.clearColor(), forState: .Normal)
+
         button.label.font = UIFont.systemFontOfSize(TodayUX.labelTextSize)
         button.setImage(UIImage(named: "copy_link_icon"), forState: .Normal)
 
