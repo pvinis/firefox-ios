@@ -627,7 +627,7 @@ class HomePageSetting: Setting {
     }
 
     override func onClick(navigationController: UINavigationController?) {
-        let viewController = ClearPrivateDataTableViewController()
+        let viewController = HomePageSettingsViewController()
         viewController.profile = profile
         viewController.tabManager = tabManager
         navigationController?.pushViewController(viewController, animated: true)
