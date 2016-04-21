@@ -80,6 +80,7 @@ class BrowserViewController: UIViewController {
     private var scrollController = BrowserScrollingController()
 
     private var keyboardState: KeyboardState?
+    private var isInBackground = false
 
     let WhiteListedUrls = ["\\/\\/itunes\\.apple\\.com\\/"]
 
@@ -183,7 +184,8 @@ class BrowserViewController: UIViewController {
             home.view.setNeedsUpdateConstraints()
         }
 
-        if let tab = tabManager.selectedTab,
+        if !isInBackground,
+            let tab = tabManager.selectedTab,
                webView = tab.webView {
             updateURLBarDisplayURL(tab)
             navigationToolbar.updateBackStatus(webView.canGoBack)
@@ -217,8 +219,8 @@ class BrowserViewController: UIViewController {
             })
         }
     }
-
     func SELappDidEnterBackgroundNotification() {
+        isInBackground = true
         displayedPopoverController?.dismissViewControllerAnimated(false, completion: nil)
     }
 
@@ -239,6 +241,7 @@ class BrowserViewController: UIViewController {
     }
 
     func SELappDidBecomeActiveNotification() {
+        isInBackground = false
         // Re-show any components that might have been hidden because they were being displayed
         // as part of a private mode tab
         UIView.animateWithDuration(0.2, delay: 0, options: UIViewAnimationOptions.CurveEaseInOut, animations: {
